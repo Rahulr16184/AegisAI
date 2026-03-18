@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS   # <--- import CORS
+from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)   # <--- enable CORS for all routes
+
+# Enable CORS for all origins
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route('/')
 def home():
@@ -11,11 +13,10 @@ def home():
 @app.route('/detect', methods=['POST'])
 def detect():
     file = request.files.get('image')
-
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    # TEMP: dummy response
+    # Dummy response for now
     return jsonify({
         "status": "success",
         "message": "Image received",
