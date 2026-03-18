@@ -2,11 +2,17 @@ from fastapi import FastAPI, File, UploadFile
 from ultralytics import YOLO
 import cv2
 import numpy as np
+import os
 
 app = FastAPI()
 
-# Load model
-model = YOLO("best.pt")
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        model = YOLO("best.pt")
+    return model
 
 @app.get("/")
 def home():
@@ -16,11 +22,10 @@ def home():
 async def predict(file: UploadFile = File(...)):
     contents = await file.read()
 
-    # Convert image
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    # Run prediction
+    model = get_model()
     results = model(img)
 
     detections = []
@@ -34,3 +39,9 @@ async def predict(file: UploadFile = File(...)):
             })
 
     return {"detections": detections}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("app:app", host="0.0.0.0", port=port)
