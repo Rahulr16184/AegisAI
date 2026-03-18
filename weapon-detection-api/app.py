@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS   # <--- import CORS
 
 app = Flask(__name__)
+CORS(app)   # <--- enable CORS for all routes
 
 @app.route('/')
 def home():
@@ -13,7 +15,7 @@ def detect():
     if not file:
         return jsonify({"error": "No file uploaded"}), 400
 
-    # TEMP: dummy response (we will connect YOLO later)
+    # TEMP: dummy response
     return jsonify({
         "status": "success",
         "message": "Image received",
