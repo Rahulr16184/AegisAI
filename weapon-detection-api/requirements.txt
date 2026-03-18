@@ -1,3 +1,6 @@
 flask
 gunicorn
 flask-cors
+ultralytics
+opencv-python
+numpy
