@@ -4,7 +4,7 @@ gunicorn
 ultralytics
 opencv-python-headless
 numpy
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
+torch==2.10.0+cpu
+torchvision==0.25.0+cpu
 --extra-index-url https://download.pytorch.org/whl/cpu
 python-multipart
