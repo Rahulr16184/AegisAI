@@ -9,10 +9,10 @@ import io
 
 app = FastAPI()
 
-# ✅ CORS FIX (IMPORTANT)
+# ✅ CORS (IMPORTANT)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change later for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,13 +20,14 @@ app.add_middleware(
 
 # 🔧 CONFIG
 model = None
-CONF_THRESHOLD = 0.7
+CONF_THRESHOLD = 0.5
 
-# ✅ Lazy load model
+# ✅ Load model once (FASTER)
 def get_model():
     global model
     if model is None:
         model = YOLO("best.pt")
+        model.fuse()  # 🔥 speed boost
     return model
 
 # ✅ Health check
@@ -44,7 +45,9 @@ async def predict(file: UploadFile = File(...)):
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
         model = get_model()
-        results = model(img, imgsz=320)  # ⚡ faster inference
+
+        # 🔥 FAST inference
+        results = model.predict(img, imgsz=224, stream=False)
 
         detections = []
         names = model.names
@@ -60,6 +63,8 @@ async def predict(file: UploadFile = File(...)):
                         "bbox": box.xyxy[0].tolist()
                     })
 
+        print("Detections:", detections)  # 🔥 debug log
+
         return {
             "status": "success",
             "count": len(detections),
@@ -69,7 +74,7 @@ async def predict(file: UploadFile = File(...)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# 🔴 IMAGE RESPONSE (Bounding Box Output)
+# ✅ IMAGE RESPONSE
 @app.post("/detect-image")
 async def predict_image(file: UploadFile = File(...)):
     try:
@@ -79,7 +84,7 @@ async def predict_image(file: UploadFile = File(...)):
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
         model = get_model()
-        results = model(img, imgsz=320)
+        results = model.predict(img, imgsz=224)
 
         names = model.names
 
@@ -91,10 +96,8 @@ async def predict_image(file: UploadFile = File(...)):
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     label = f"{names[int(box.cls[0])]} {conf:.2f}"
 
-                    # 🔴 Draw bounding box
                     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
-                    # 🔴 Draw label
                     cv2.putText(
                         img,
                         label,
@@ -115,7 +118,7 @@ async def predict_image(file: UploadFile = File(...)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# ✅ Run server (Render compatible)
+# ✅ Render start
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 10000))
