@@ -21,6 +21,7 @@ app.add_middleware(
 # 🔧 CONFIG
 model = None
 CONF_THRESHOLD = 0.5
+IMG_SIZE = 416
 
 # ✅ Load model once (FASTER)
 def get_model():
@@ -28,6 +29,7 @@ def get_model():
     if model is None:
         model = YOLO("best.pt")
         model.fuse()  # 🔥 speed boost
+        model.to("cpu")  # Render runs on CPU
     return model
 
 # ✅ Health check
@@ -35,9 +37,9 @@ def get_model():
 def home():
     return {"message": "Weapon Detection API Running"}
 
-# ✅ JSON RESPONSE
+# ✅ JSON RESPONSE (FAST)
 @app.post("/detect")
-async def predict(file: UploadFile = File(...)):
+async def detect(file: UploadFile = File(...)):
     try:
         contents = await file.read()
 
@@ -46,8 +48,8 @@ async def predict(file: UploadFile = File(...)):
 
         model = get_model()
 
-        # 🔥 FAST inference
-        results = model.predict(img, imgsz=224, stream=False)
+        # 🔥 Optimized inference
+        results = model(img, imgsz=IMG_SIZE, conf=CONF_THRESHOLD, verbose=False)
 
         detections = []
         names = model.names
@@ -63,20 +65,19 @@ async def predict(file: UploadFile = File(...)):
                         "bbox": box.xyxy[0].tolist()
                     })
 
-        print("Detections:", detections)  # 🔥 debug log
-
         return {
             "status": "success",
             "count": len(detections),
+            "weapon_detected": len(detections) > 0,
             "detections": detections
         }
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# ✅ IMAGE RESPONSE
+# ✅ IMAGE RESPONSE (with bounding boxes)
 @app.post("/detect-image")
-async def predict_image(file: UploadFile = File(...)):
+async def detect_image(file: UploadFile = File(...)):
     try:
         contents = await file.read()
 
@@ -84,7 +85,7 @@ async def predict_image(file: UploadFile = File(...)):
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
         model = get_model()
-        results = model.predict(img, imgsz=224)
+        results = model(img, imgsz=IMG_SIZE, conf=CONF_THRESHOLD, verbose=False)
 
         names = model.names
 
@@ -96,8 +97,10 @@ async def predict_image(file: UploadFile = File(...)):
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     label = f"{names[int(box.cls[0])]} {conf:.2f}"
 
+                    # Draw bounding box
                     cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
+                    # Draw label
                     cv2.putText(
                         img,
                         label,
