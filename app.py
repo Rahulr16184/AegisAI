@@ -20,8 +20,8 @@ app.add_middleware(
 
 # 🔧 CONFIG
 model = None
-CONF_THRESHOLD = 0.5
-IMG_SIZE = 416
+CONF_THRESHOLD = 0.3
+IMG_SIZE = 640
 
 # ✅ Load model once (FASTER)
 def get_model():
