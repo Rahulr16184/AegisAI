@@ -35,7 +35,7 @@ def home():
     return {"message": "Weapon Detection API Running"}
 
 # ✅ JSON RESPONSE
-@app.post("/predict")
+@app.post("/detect")
 async def predict(file: UploadFile = File(...)):
     try:
         contents = await file.read()
@@ -70,7 +70,7 @@ async def predict(file: UploadFile = File(...)):
         return {"status": "error", "message": str(e)}
 
 # 🔴 IMAGE RESPONSE (Bounding Box Output)
-@app.post("/predict-image")
+@app.post("/detect-image")
 async def predict_image(file: UploadFile = File(...)):
     try:
         contents = await file.read()
